@@ -25,13 +25,14 @@ type CreateOptions = {
   video: MVideo
   tasks: VideoStudioTaskPayload[]
   priority: number
+  saveAsNew: boolean
 }
 
 // eslint-disable-next-line max-len
 export class VideoStudioTranscodingJobHandler extends AbstractJobHandler<CreateOptions, RunnerJobUpdatePayload, VideoStudioTranscodingSuccess> {
 
   async create (options: CreateOptions) {
-    const { video, priority, tasks } = options
+    const { video, priority, tasks, saveAsNew } = options
 
     const jobUUID = buildUUID()
     const payload: RunnerJobStudioTranscodingPayload = {
@@ -69,7 +70,8 @@ export class VideoStudioTranscodingJobHandler extends AbstractJobHandler<CreateO
 
     const privatePayload: RunnerJobVideoStudioTranscodingPrivatePayload = {
       videoUUID: video.uuid,
-      originalTasks: tasks
+      originalTasks: tasks,
+      saveAsNew
     }
 
     const job = await this.createRunnerJob({
@@ -116,7 +118,9 @@ export class VideoStudioTranscodingJobHandler extends AbstractJobHandler<CreateO
 
     const videoFilePath = resultPayload.videoFile as string
 
-    await onVideoStudioEnded({ video, editionResultPath: videoFilePath, tasks: privatePayload.originalTasks })
+    await onVideoStudioEnded({
+      video, editionResultPath: videoFilePath, tasks: privatePayload.originalTasks, saveAsNew: privatePayload.saveAsNew
+    })
 
     logger.info(
       'Runner video edition transcoding job %s for %s ended.',

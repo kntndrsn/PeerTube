@@ -25,4 +25,16 @@ export class VideoStudioService {
     return this.authHttp.post(url, data)
       .pipe(catchError(err => this.restExtractor.handleError(err)))
   }
+
+  saveAsNewVideo (videoId: number | string, tasks: VideoStudioTask[]) {
+    const url = VideoService.BASE_VIDEO_URL + '/' + videoId + '/studio/new'
+    const body: VideoStudioCreateEdition = {
+      tasks
+    }
+
+    const data = objectToFormData(body)
+
+    return this.authHttp.post(url, data)
+      .pipe(catchError(err => this.restExtractor.handleError(err)))
+  }
 }

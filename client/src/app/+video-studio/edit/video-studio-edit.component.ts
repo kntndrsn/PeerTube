@@ -85,7 +85,19 @@ export class VideoStudioEditComponent extends FormReactive implements OnInit {
     return this.serverService.getHTMLConfig().video.image.extensions
   }
 
-  async runEdition () {
+  async save () {
+
+    await this.runEdition(false)
+
+  }
+
+  async saveAsNew () {
+
+    await this.runEdition(true)
+
+  }
+
+  async runEdition (saveAsNew = false) {
     if (this.isRunningEdition) return
     if (!this.form.valid) return
     if (this.noEdition()) return
@@ -97,13 +109,38 @@ export class VideoStudioEditComponent extends FormReactive implements OnInit {
     const confirmHTML = $localize`The current video will be overwritten by this edited video and <strong>you won't be able to recover it</strong>.<br /><br />` +
       $localize`As a reminder, the following tasks will be executed: <ol>${listHTML}</ol>`
 
-    if (await this.confirmService.confirm(confirmHTML, title) !== true) return
+    // Request user confirmation if they are editing existing video.
+    // If they are saving as a new video, then no prompt
+    if (!saveAsNew) {
+      if (await this.confirmService.confirm(confirmHTML, title) !== true) return
+    }
 
     this.isRunningEdition = true
 
     const tasks = this.buildTasks()
 
     this.loadingBar.useRef().start()
+
+    if (saveAsNew) {
+
+      return this.videoStudioService.saveAsNewVideo(this.video.uuid, tasks)
+      .subscribe({
+        next: () => {
+          this.notifier.success($localize`Edition tasks created.`)
+
+          // Don't redirect to old video version watch page that could be confusing for users
+          this.router.navigateByUrl('/my-library/videos')
+        },
+
+        error: err => {
+          this.loadingBar.useRef().complete()
+          this.isRunningEdition = false
+          this.notifier.error(err.message)
+          logger.error(err)
+        }
+      })
+
+    }
 
     return this.videoStudioService.editVideo(this.video.uuid, tasks)
       .subscribe({

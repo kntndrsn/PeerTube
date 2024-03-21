@@ -5,14 +5,15 @@ import { createTorrentAndSetInfoHashFromPath } from '@server/helpers/webtorrent.
 import { CONFIG } from '@server/initializers/config.js'
 import { MUser, MVideo, MVideoFile, MVideoFullLight, MVideoWithAllFiles } from '@server/types/models/index.js'
 import { getVideoStreamDuration } from '@peertube/peertube-ffmpeg'
-import { VideoStudioEditionPayload, VideoStudioTask, VideoStudioTaskPayload } from '@peertube/peertube-models'
+import { VideoState, VideoStudioEditionPayload, VideoStudioTask, VideoStudioTaskPayload } from '@peertube/peertube-models'
 import { JobQueue } from './job-queue/index.js'
 import { VideoStudioTranscodingJobHandler } from './runners/index.js'
 import { getTranscodingJobPriority } from './transcoding/transcoding-priority.js'
 import { buildNewFile, removeHLSPlaylist, removeWebVideoFile } from './video-file.js'
 import { VideoPathManager } from './video-path-manager.js'
 import { buildStoryboardJobIfNeeded } from './video-jobs.js'
-import { buildAspectRatio } from '@peertube/peertube-core-utils'
+import { buildAspectRatio, pick } from '@peertube/peertube-core-utils'
+import { LocalVideoCreator } from '@server/lib/local-video-creator.js'
 
 const lTags = loggerTagsFactory('video-studio')
 
@@ -77,7 +78,7 @@ export async function createVideoStudioJob (options: {
   const priority = await getTranscodingJobPriority({ user, type: 'studio', fallback: 0 })
 
   if (CONFIG.VIDEO_STUDIO.REMOTE_RUNNERS.ENABLED) {
-    await new VideoStudioTranscodingJobHandler().create({ video, tasks: payload.tasks, priority })
+    await new VideoStudioTranscodingJobHandler().create({ video, tasks: payload.tasks, priority, saveAsNew: payload.saveAsNew })
     return
   }
 
@@ -88,34 +89,90 @@ export async function onVideoStudioEnded (options: {
   editionResultPath: string
   tasks: VideoStudioTaskPayload[]
   video: MVideoFullLight
+  saveAsNew: boolean
 }) {
-  const { video, tasks, editionResultPath } = options
+  const { tasks, editionResultPath, saveAsNew } = options
 
-  const newFile = await buildNewFile({ path: editionResultPath, mode: 'web-video' })
-  newFile.videoId = video.id
+  let video = options.video
 
-  const outputPath = VideoPathManager.Instance.getFSVideoFileOutputPath(video, newFile)
-  await move(editionResultPath, outputPath)
+  if (saveAsNew) {
+
+    const videoOptions = {
+
+      lTags: loggerTagsFactory('video-studio'),
+
+      videoFile: { path: editionResultPath, probe: null },
+
+      videoAttributes: {
+        ...pick(video, [
+          'category',
+          'licence',
+          'language',
+          'privacy',
+          'description',
+          'support',
+          'isLive',
+          'nsfw'
+        ]),
+
+        name: video.name += ' - Studio Edit',
+
+        duration: await getVideoStreamDuration(editionResultPath),
+
+        inputFilename: editionResultPath.split('/').pop(),
+
+        state: VideoState.TO_TRANSCODE
+      },
+
+      liveAttributes: null,
+
+      channel: video.VideoChannel,
+      user:  null,
+      videoAttributeResultHook: undefined,
+      thumbnails: [],
+
+      chapters: undefined,
+      fallbackChapters: {
+        fromDescription: false,
+        finalFallback: undefined
+      }
+
+    }
+
+    const localVideoCreator = new LocalVideoCreator(videoOptions)
+
+    video = (await localVideoCreator.create()).video
+
+  } else {
+
+    // If updating the existing file...
+    const newFile = await buildNewFile({ path: editionResultPath, mode: 'web-video' })
+    newFile.videoId = video.id
+
+    const outputPath = VideoPathManager.Instance.getFSVideoFileOutputPath(video, newFile)
+    await move(editionResultPath, outputPath)
+
+    await createTorrentAndSetInfoHashFromPath(video, newFile, outputPath)
+    await removeAllFiles(video, newFile)
+
+    await newFile.save()
+
+    video.duration = await getVideoStreamDuration(outputPath)
+    video.aspectRatio = buildAspectRatio({ width: newFile.width, height: newFile.height })
+    await video.save()
+
+  }
 
   await safeCleanupStudioTMPFiles(tasks)
 
-  await createTorrentAndSetInfoHashFromPath(video, newFile, outputPath)
-  await removeAllFiles(video, newFile)
-
-  await newFile.save()
-
-  video.duration = await getVideoStreamDuration(outputPath)
-  video.aspectRatio = buildAspectRatio({ width: newFile.width, height: newFile.height })
-  await video.save()
-
   return JobQueue.Instance.createSequentialJobFlow(
-    buildStoryboardJobIfNeeded({ video, federate: false }),
+    buildStoryboardJobIfNeeded({ video, federate: saveAsNew }),
 
     {
       type: 'federate-video' as 'federate-video',
       payload: {
         videoUUID: video.uuid,
-        isNewVideoForFederation: false
+        isNewVideoForFederation: saveAsNew
       }
     },
 
@@ -124,7 +181,7 @@ export async function onVideoStudioEnded (options: {
       payload: {
         videoUUID: video.uuid,
         optimizeJob: {
-          isNewVideo: false
+          isNewVideo: saveAsNew
         }
       }
     }

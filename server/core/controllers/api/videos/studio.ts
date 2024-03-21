@@ -49,7 +49,14 @@ studioRouter.post('/:videoId/studio/edit',
   authenticate,
   tasksFiles,
   asyncMiddleware(videoStudioAddEditionValidator),
-  asyncMiddleware(createEditionTasks)
+  asyncMiddleware(updateExistingVideo)
+)
+
+studioRouter.post('/:videoId/studio/new',
+  authenticate,
+  tasksFiles,
+  asyncMiddleware(videoStudioAddEditionValidator),
+  asyncMiddleware(saveAsNewVideo)
 )
 
 // ---------------------------------------------------------------------------
@@ -60,17 +67,33 @@ export {
 
 // ---------------------------------------------------------------------------
 
-async function createEditionTasks (req: express.Request, res: express.Response) {
+async function updateExistingVideo (req: express.Request, res: express.Response) {
+
+  await createEditionTasks(req, res, false)
+
+}
+
+async function saveAsNewVideo (req: express.Request, res: express.Response) {
+
+  await createEditionTasks(req, res, true)
+
+}
+
+async function createEditionTasks (req: express.Request, res: express.Response, saveAsNew: boolean = false) {
   const files = req.files as Express.Multer.File[]
   const body = req.body as VideoStudioCreateEdition
   const video = res.locals.videoAll
 
-  video.state = VideoState.TO_EDIT
-  await video.save()
+  // If we are editing an existing video, we will update the state
+  if (!saveAsNew) {
+    video.state = VideoState.TO_EDIT
+    await video.save()
+  }
 
   const payload = {
     videoUUID: video.uuid,
-    tasks: await Bluebird.mapSeries(body.tasks, (t, i) => buildTaskPayload(t, i, files))
+    tasks: await Bluebird.mapSeries(body.tasks, (t, i) => buildTaskPayload(t, i, files)),
+    saveAsNew
   }
 
   await createVideoStudioJob({

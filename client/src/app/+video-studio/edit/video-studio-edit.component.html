@@ -63,8 +63,14 @@
       </div>
 
       <my-button
-        theme="orange" i18n-label label="Run video edition" icon="circle-tick"
-        (click)="runEdition()" (keydown.enter)="runEdition()"
+        theme="orange" i18n-label label="Save" icon="circle-tick"
+        (click)="save()" (keydown.enter)="runEdition()"
+        [disabled]="!form.valid || isRunningEdition || noEdition()"
+      ></my-button>
+
+      <my-button
+        theme="grey" i18n-label label="Save as new video" icon="copy"
+        (click)="saveAsNew()"
         [disabled]="!form.valid || isRunningEdition || noEdition()"
       ></my-button>
     </form>

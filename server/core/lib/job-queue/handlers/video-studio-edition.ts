@@ -74,7 +74,7 @@ async function processVideoStudioEdition (job: Job) {
 
     logger.info('Video edition ended for video %s.', video.uuid, lTags)
 
-    await onVideoStudioEnded({ video, editionResultPath, tasks: payload.tasks })
+    await onVideoStudioEnded({ video, editionResultPath, tasks: payload.tasks, saveAsNew: payload.saveAsNew })
   } catch (err) {
     await safeCleanupStudioTMPFiles(payload.tasks)
 

@@ -244,6 +244,7 @@ export type VideoStudioTaskPayload =
 export interface VideoStudioEditionPayload {
   videoUUID: string
   tasks: VideoStudioTaskPayload[]
+  saveAsNew: boolean
 }
 
 // ---------------------------------------------------------------------------

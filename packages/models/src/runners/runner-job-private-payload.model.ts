@@ -44,4 +44,5 @@ export interface RunnerJobLiveRTMPHLSTranscodingPrivatePayload {
 export interface RunnerJobVideoStudioTranscodingPrivatePayload {
   videoUUID: string
   originalTasks: VideoStudioTaskPayload[]
+  saveAsNew: boolean
 }
