@@ -235,11 +235,20 @@ export type VideoStudioTaskWatermarkPayload = {
   }
 }
 
+export type VideoStudioTaskSaveAsPayload = {
+  name: 'save-as'
+
+  options: {
+    name: string
+  }
+}
+
 export type VideoStudioTaskPayload =
   VideoStudioTaskCutPayload |
   VideoStudioTaskIntroPayload |
   VideoStudioTaskOutroPayload |
-  VideoStudioTaskWatermarkPayload
+  VideoStudioTaskWatermarkPayload |
+  VideoStudioTaskSaveAsPayload
 
 export interface VideoStudioEditionPayload {
   videoUUID: string

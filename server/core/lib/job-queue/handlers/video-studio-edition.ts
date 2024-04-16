@@ -20,7 +20,8 @@ import {
   VideoStudioTaskIntroPayload,
   VideoStudioTaskOutroPayload,
   VideoStudioTaskPayload,
-  VideoStudioTaskWatermarkPayload
+  VideoStudioTaskWatermarkPayload,
+  VideoStudioTaskSaveAsPayload
 } from '@peertube/peertube-models'
 import { logger, loggerTagsFactory } from '../../../helpers/logger.js'
 
@@ -102,7 +103,8 @@ const taskProcessors: { [id in VideoStudioTask['name']]: (options: TaskProcessor
   'add-intro': processAddIntroOutro,
   'add-outro': processAddIntroOutro,
   'cut': processCut,
-  'add-watermark': processAddWatermark
+  'add-watermark': processAddWatermark,
+  'save-as': processSaveAs
 }
 
 async function processTask (options: TaskProcessorOptions) {
@@ -160,6 +162,10 @@ function processAddWatermark (options: TaskProcessorOptions<VideoStudioTaskWater
       verticalMarginRatio: task.options.verticalMarginRatio
     }
   })
+}
+
+function processSaveAs (options: TaskProcessorOptions<VideoStudioTaskSaveAsPayload>) {
+  return new Promise(() => {})
 }
 
 // ---------------------------------------------------------------------------

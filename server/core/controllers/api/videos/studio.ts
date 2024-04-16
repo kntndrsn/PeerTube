@@ -14,6 +14,7 @@ import {
   VideoStudioTaskIntro,
   VideoStudioTaskOutro,
   VideoStudioTaskPayload,
+  VideoStudioTaskSaveAs,
   VideoStudioTaskWatermark
 } from '@peertube/peertube-models'
 import { asyncMiddleware, authenticate, videoStudioAddEditionValidator } from '../../../middlewares/index.js'
@@ -115,7 +116,8 @@ const taskPayloadBuilders: {
   'add-intro': buildIntroOutroTask,
   'add-outro': buildIntroOutroTask,
   'cut': buildCutTask,
-  'add-watermark': buildWatermarkTask
+  'add-watermark': buildWatermarkTask,
+  'save-as': buildSaveAsTask
 }
 
 function buildTaskPayload (task: VideoStudioTask, indice: number, files: Express.Multer.File[]): Promise<VideoStudioTaskPayload> {
@@ -163,4 +165,13 @@ async function moveStudioFileToPersistentTMP (file: string) {
   await move(file, destination)
 
   return destination
+}
+
+function buildSaveAsTask (task: VideoStudioTaskSaveAs) {
+  return Promise.resolve({
+    name: task.name,
+    options: {
+      name: task.options.name
+    }
+  })
 }

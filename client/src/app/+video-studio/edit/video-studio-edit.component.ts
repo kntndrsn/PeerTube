@@ -15,6 +15,7 @@ import { ReactiveFileComponent } from '../../shared/shared-forms/reactive-file.c
 import { TimestampInputComponent } from '../../shared/shared-forms/timestamp-input.component'
 import { FormsModule, ReactiveFormsModule } from '@angular/forms'
 import { VideoDetails } from '@app/shared/shared-main/video/video-details.model'
+import { PeertubeCheckboxComponent } from '@app/shared/shared-forms/peertube-checkbox.component'
 
 @Component({
   selector: 'my-video-studio-edit',
@@ -29,7 +30,8 @@ import { VideoDetails } from '@app/shared/shared-main/video/video-details.model'
     ButtonComponent,
     EmbedComponent,
     NgIf,
-    NgFor
+    NgFor,
+    PeertubeCheckboxComponent
   ]
 })
 export class VideoStudioEditComponent extends FormReactive implements OnInit {
@@ -54,9 +56,12 @@ export class VideoStudioEditComponent extends FormReactive implements OnInit {
     this.video = this.route.snapshot.data.video
 
     const defaultValues = {
-      cut: {
+      'cut': {
         start: 0,
         end: this.video.duration
+      },
+      'save-as': {
+        enabled: false
       }
     }
 
@@ -73,6 +78,10 @@ export class VideoStudioEditComponent extends FormReactive implements OnInit {
       },
       'add-watermark': {
         file: null
+      },
+      'save-as': {
+        enabled: null,
+        name: null
       }
     }, defaultValues)
   }
@@ -85,19 +94,19 @@ export class VideoStudioEditComponent extends FormReactive implements OnInit {
     return this.serverService.getHTMLConfig().video.image.extensions
   }
 
-  async save () {
+  // async save () {
 
-    await this.runEdition(false)
+  //   await this.runEdition(false)
 
-  }
+  // }
 
-  async saveAsNew () {
+  // async saveAsNew () {
 
-    await this.runEdition(true)
+  //   await this.runEdition(true)
 
-  }
+  // }
 
-  async runEdition (saveAsNew = false) {
+  async runEdition () {
     if (this.isRunningEdition) return
     if (!this.form.valid) return
     if (this.noEdition()) return
@@ -108,6 +117,9 @@ export class VideoStudioEditComponent extends FormReactive implements OnInit {
     // eslint-disable-next-line max-len
     const confirmHTML = $localize`The current video will be overwritten by this edited video and <strong>you won't be able to recover it</strong>.<br /><br />` +
       $localize`As a reminder, the following tasks will be executed: <ol>${listHTML}</ol>`
+
+    const saveAsNew = false // Check box
+    // const newVideoName = ""
 
     // Request user confirmation if they are editing existing video.
     // If they are saving as a new video, then no prompt
@@ -204,6 +216,11 @@ export class VideoStudioEditComponent extends FormReactive implements OnInit {
         }
       }
 
+      if (t.name === 'save-as') {
+        const { name } = t.options
+        return $localize`Save as new video: ${name || this.video.name}`
+      }
+
       return ''
     })
   }
@@ -252,6 +269,15 @@ export class VideoStudioEditComponent extends FormReactive implements OnInit {
         name: 'add-watermark',
         options: {
           file: value['add-watermark']['file']
+        }
+      })
+    }
+
+    if (value['save-as']['enabled']) {
+      tasks.push({
+        name: 'save-as',
+        options: {
+          name: value['save-as']['name']
         }
       })
     }

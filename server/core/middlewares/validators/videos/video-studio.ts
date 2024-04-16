@@ -5,7 +5,8 @@ import {
   isStudioCutTaskValid,
   isStudioTaskAddIntroOutroValid,
   isStudioTaskAddWatermarkValid,
-  isValidStudioTasksArray
+  isValidStudioTasksArray,
+  isStudioSaveAsValid
 } from '@server/helpers/custom-validators/video-studio.js'
 import { cleanUpReqFiles } from '@server/helpers/express-utils.js'
 import { CONFIG } from '@server/initializers/config.js'
@@ -94,7 +95,8 @@ const taskCheckers: {
   'cut': isStudioCutTaskValid,
   'add-intro': isStudioTaskAddIntroOutroValid,
   'add-outro': isStudioTaskAddIntroOutroValid,
-  'add-watermark': isStudioTaskAddWatermarkValid
+  'add-watermark': isStudioTaskAddWatermarkValid,
+  'save-as': isStudioSaveAsValid
 }
 
 function checkTask (req: express.Request, task: VideoStudioTask, indice?: number) {

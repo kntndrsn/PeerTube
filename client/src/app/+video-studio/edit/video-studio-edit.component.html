@@ -62,17 +62,29 @@
         </div>
       </div>
 
+      <div class="section" formGroupName="save-as">
+        <h2 i18n>SAVE AS NEW VIDEO</h2>
+      
+        <div i18n class="description"></div>
+      
+        <div class="form-group">
+          <my-peertube-checkbox inputName="enabled" formControlName="enabled"
+            i18n-labelText labelText="Save as new video" #enabled></my-peertube-checkbox>
+        </div>
+      
+        <div class="form-group" *ngIf="enabled.checked">
+          <label for="name">New video title</label>
+          <input type="text" [placeholder]="video.name" formControlName="name" class="form-control" />
+        </div>
+      
+      </div>
+
       <my-button
-        theme="orange" i18n-label label="Save" icon="circle-tick"
-        (click)="save()" (keydown.enter)="runEdition()"
+        theme="orange" i18n-label label="Run video edition" icon="circle-tick"
+        (click)="runEdition()" (keydown.enter)="runEdition()"
         [disabled]="!form.valid || isRunningEdition || noEdition()"
       ></my-button>
 
-      <my-button
-        theme="grey" i18n-label label="Save as new video" icon="copy"
-        (click)="saveAsNew()"
-        [disabled]="!form.valid || isRunningEdition || noEdition()"
-      ></my-button>
     </form>
 
 

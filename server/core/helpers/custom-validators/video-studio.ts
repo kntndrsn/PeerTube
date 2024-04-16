@@ -42,6 +42,17 @@ function isStudioTaskAddWatermarkValid (task: VideoStudioTask, indice: number, f
     file && isVideoImageValid([ file ], null, true)
 }
 
+function isStudioSaveAsValid (task: VideoStudioTask) {
+  if (task.name !== 'save-as') return false
+  if (!task.options) return false
+
+  const { name } = task.options
+
+  if (!name) return false
+
+  return name.length > 0
+}
+
 // ---------------------------------------------------------------------------
 
 export {
@@ -49,5 +60,6 @@ export {
 
   isStudioCutTaskValid,
   isStudioTaskAddIntroOutroValid,
-  isStudioTaskAddWatermarkValid
+  isStudioTaskAddWatermarkValid,
+  isStudioSaveAsValid
 }

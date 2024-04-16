@@ -6,7 +6,8 @@ export type VideoStudioTask =
   VideoStudioTaskCut |
   VideoStudioTaskIntro |
   VideoStudioTaskOutro |
-  VideoStudioTaskWatermark
+  VideoStudioTaskWatermark |
+  VideoStudioTaskSaveAs
 
 export interface VideoStudioTaskCut {
   name: 'cut'
@@ -38,6 +39,14 @@ export interface VideoStudioTaskWatermark {
 
   options: {
     file: Blob | string
+  }
+}
+
+export interface VideoStudioTaskSaveAs {
+  name: 'save-as'
+
+  options: {
+    name: string
   }
 }
 
