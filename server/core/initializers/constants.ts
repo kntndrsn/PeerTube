@@ -502,7 +502,7 @@ const CONSTRAINTS_FIELDS = {
 }
 
 const VIEW_LIFETIME = {
-  VIEW: CONFIG.VIEWS.VIDEOS.IP_VIEW_EXPIRATION,
+  VIEW: CONFIG.VIEWS.VIDEOS.VIEW_EXPIRATION,
   VIEWER_COUNTER: 60000 * 2, // 2 minutes
   VIEWER_STATS: 60000 * 60 // 1 hour
 }
@@ -898,7 +898,7 @@ const PREVIEWS_SIZE = {
   minWidth: 400
 }
 const ACTOR_IMAGES_SIZE: { [key in ActorImageType_Type]: { width: number, height: number }[] } = {
-  [ActorImageType.AVATAR]: [
+  [ActorImageType.AVATAR]: [ // 1/1 ratio
     {
       width: 1500,
       height: 1500
@@ -916,10 +916,14 @@ const ACTOR_IMAGES_SIZE: { [key in ActorImageType_Type]: { width: number, height
       height: 48
     }
   ],
-  [ActorImageType.BANNER]: [
+  [ActorImageType.BANNER]: [ // 6/1 ratio
     {
       width: 1920,
-      height: 317 // 6/1 ratio
+      height: 317
+    },
+    {
+      width: 600,
+      height: 100
     }
   ]
 }
@@ -1505,6 +1509,10 @@ async function buildLanguages () {
   // Override Portuguese label
   languages['pt'] = 'Portuguese (Brazilian)'
   languages['pt-PT'] = 'Portuguese (Portugal)'
+
+  // Override Spanish labels
+  languages['es'] = 'Spanish (Spain)'
+  languages['es-419'] = 'Spanish (Latin America)'
 
   // Chinese languages
   languages['zh-Hans'] = 'Simplified Chinese'
