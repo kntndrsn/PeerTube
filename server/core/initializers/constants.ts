@@ -18,6 +18,8 @@ import {
   UserRegistrationStateType,
   VideoChannelSyncState,
   VideoChannelSyncStateType,
+  VideoCommentPolicy,
+  VideoCommentPolicyType,
   VideoImportState,
   VideoImportStateType,
   VideoPlaylistPrivacy,
@@ -45,7 +47,7 @@ import { cpus } from 'os'
 
 // ---------------------------------------------------------------------------
 
-const LAST_MIGRATION_VERSION = 835
+const LAST_MIGRATION_VERSION = 845
 
 // ---------------------------------------------------------------------------
 
@@ -133,6 +135,8 @@ const SORTABLE_COLUMNS = {
 
   ACCOUNTS_BLOCKLIST: [ 'createdAt' ],
   SERVERS_BLOCKLIST: [ 'createdAt' ],
+
+  WATCHED_WORDS_LISTS: [ 'createdAt', 'updatedAt', 'listName' ],
 
   USER_NOTIFICATIONS: [ 'createdAt', 'read' ],
 
@@ -498,6 +502,11 @@ const CONSTRAINTS_FIELDS = {
   },
   VIDEO_CHAPTERS: {
     TITLE: { min: 1, max: 100 } // Length
+  },
+  WATCHED_WORDS: {
+    LIST_NAME: { min: 1, max: 100 }, // Length
+    WORDS: { min: 1, max: 500 }, // Number of total words
+    WORD: { min: 1, max: 100 } // Length
   }
 }
 
@@ -513,12 +522,13 @@ const MAX_LOCAL_VIEWER_WATCH_SECTIONS = 100
 let CONTACT_FORM_LIFETIME = 60000 * 60 // 1 hour
 
 const VIDEO_TRANSCODING_FPS: VideoTranscodingFPS = {
-  MIN: 1,
+  HARD_MIN: 0.1,
+  SOFT_MIN: 1,
   STANDARD: [ 24, 25, 30 ],
   HD_STANDARD: [ 50, 60 ],
   AUDIO_MERGE: 25,
   AVERAGE: 30,
-  MAX: 60,
+  SOFT_MAX: 60,
   KEEP_ORIGIN_FPS_RESOLUTION_MIN: 720 // We keep the original FPS on high resolutions (720 minimum)
 }
 
@@ -662,6 +672,12 @@ const USER_IMPORT_STATES: { [ id in UserImportStateType ]: string } = {
   [UserImportState.ERRORED]: 'Failed'
 }
 
+const VIDEO_COMMENTS_POLICY: { [ id in VideoCommentPolicyType ]: string } = {
+  [VideoCommentPolicy.DISABLED]: 'Disabled',
+  [VideoCommentPolicy.ENABLED]: 'Enabled',
+  [VideoCommentPolicy.REQUIRES_APPROVAL]: 'Requires approval'
+}
+
 const MIMETYPES = {
   AUDIO: {
     MIMETYPE_EXT: {
@@ -774,7 +790,6 @@ const ACTIVITY_PUB = {
     'application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
   ],
   ACCEPT_HEADER: 'application/activity+json, application/ld+json',
-  PUBLIC: 'https://www.w3.org/ns/activitystreams#Public',
   COLLECTION_ITEMS_PER_PAGE: 10,
   FETCH_PAGE_LIMIT: 2000,
   MAX_RECURSION_COMMENTS: 100,
@@ -972,6 +987,10 @@ const LRU_CACHE = {
   VIDEO_TOKENS: {
     MAX_SIZE: 100_000,
     TTL: parseDurationToMs('8 hours')
+  },
+  WATCHED_WORDS_REGEX: {
+    MAX_SIZE: 100,
+    TTL: parseDurationToMs('24 hours')
   },
   TRACKER_IPS: {
     MAX_SIZE: 100_000
@@ -1243,6 +1262,7 @@ export {
   ACCEPT_HEADERS,
   BCRYPT_SALT_SIZE,
   TRACKER_RATE_LIMITS,
+  VIDEO_COMMENTS_POLICY,
   FILES_CACHE,
   LOG_FILENAME,
   CONSTRAINTS_FIELDS,

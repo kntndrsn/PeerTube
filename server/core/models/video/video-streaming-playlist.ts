@@ -26,7 +26,6 @@ import {
   Is, Table,
   UpdatedAt
 } from 'sequelize-typescript'
-import { isActivityPubUrlValid } from '../../helpers/custom-validators/activitypub/misc.js'
 import { isArrayOf } from '../../helpers/custom-validators/misc.js'
 import { isVideoFileInfoHashValid } from '../../helpers/custom-validators/videos.js'
 import {
@@ -73,7 +72,6 @@ export class VideoStreamingPlaylistModel extends SequelizeModel<VideoStreamingPl
   playlistFilename: string
 
   @AllowNull(true)
-  @Is('PlaylistUrl', value => throwIfNotValid(value, isActivityPubUrlValid, 'playlist url', true))
   @Column(DataType.STRING(CONSTRAINTS_FIELDS.VIDEOS.URL.max))
   playlistUrl: string
 
@@ -91,7 +89,6 @@ export class VideoStreamingPlaylistModel extends SequelizeModel<VideoStreamingPl
   segmentsSha256Filename: string
 
   @AllowNull(true)
-  @Is('VideoStreamingSegmentsSha256Url', value => throwIfNotValid(value, isActivityPubUrlValid, 'segments sha256 url', true))
   @Column
   segmentsSha256Url: string
 
@@ -139,7 +136,7 @@ export class VideoStreamingPlaylistModel extends SequelizeModel<VideoStreamingPl
     // Don't add a LIMIT 1 here to prevent seq scan by PostgreSQL (not sure why id doesn't use the index when we add a LIMIT)
     const query = 'SELECT 1 FROM "videoStreamingPlaylist" WHERE "p2pMediaLoaderInfohashes" @> $infoHash'
 
-    return doesExist(this.sequelize, query, { infoHash: `{${infoHash}}` }) // Transform infoHash in a PG array
+    return doesExist({ sequelize: this.sequelize, query, bind: { infoHash: `{${infoHash}}` } }) // Transform infoHash in a PG array
   }
 
   static buildP2PMediaLoaderInfoHashes (playlistUrl: string, files: unknown[]) {
@@ -238,7 +235,7 @@ export class VideoStreamingPlaylistModel extends SequelizeModel<VideoStreamingPl
       `AND "video"."remote" IS FALSE AND "video"."uuid" = $videoUUID ` +
       `AND "storage" = ${FileStorage.FILE_SYSTEM} LIMIT 1`
 
-    return doesExist(this.sequelize, query, { videoUUID })
+    return doesExist({ sequelize: this.sequelize, query, bind: { videoUUID } })
   }
 
   assignP2PMediaLoaderInfoHashes (video: MVideo, files: unknown[]) {

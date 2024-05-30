@@ -34,7 +34,8 @@ type Use<K extends keyof VideoModel, M> = PickWith<VideoModel, K, M>
 export type MVideo =
   Omit<VideoModel, 'VideoChannel' | 'Tags' | 'Thumbnails' | 'VideoPlaylistElements' | 'VideoAbuses' |
   'VideoFiles' | 'VideoStreamingPlaylists' | 'VideoShares' | 'AccountVideoRates' | 'VideoComments' | 'VideoViews' | 'UserVideoHistories' |
-  'ScheduleVideoUpdate' | 'VideoBlacklist' | 'VideoImport' | 'VideoCaptions' | 'VideoLive' | 'Trackers' | 'VideoPasswords' | 'Storyboard'>
+  'ScheduleVideoUpdate' | 'VideoBlacklist' | 'VideoImport' | 'VideoCaptions' | 'VideoLive' | 'Trackers' | 'VideoPasswords' | 'Storyboard' |
+  'AutomaticTags'>
 
 // ############################################################################
 
@@ -101,6 +102,10 @@ export type MVideoUserHistory =
 export type MVideoWithBlacklistLight =
   MVideo &
   Use<'VideoBlacklist', MVideoBlacklistLight>
+
+export type MVideoWithBlacklistRights =
+  MVideo &
+  Use<'VideoBlacklist', MVideoBlacklistUnfederated>
 
 export type MVideoAccountLight =
   MVideo &

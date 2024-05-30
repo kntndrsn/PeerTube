@@ -54,7 +54,7 @@
               </my-help>
 
               <my-markdown-textarea
-                formControlName="description" [markdownVideo]="videoToUpdate"
+                formControlName="description" [markdownVideo]="publishedVideo"
                 [formError]="formErrors.description" [truncateTo3Lines]="true"
               ></my-markdown-textarea>
             </div>
@@ -252,7 +252,7 @@
 
                 <my-timestamp-input
                   class="d-block" [disableBorder]="false" [inputName]="'timecode[' + i + ']'"
-                  [maxTimestamp]="videoToUpdate?.duration" formControlName="timecode"
+                  [maxTimestamp]="publishedVideo?.duration" formControlName="timecode"
                 ></my-timestamp-input>
 
                 <div>
@@ -276,7 +276,7 @@
             </div>
           </div>
 
-          <my-embed *ngIf="videoToUpdate" class="col-md-12 col-xl-6" [video]="videoToUpdate"></my-embed>
+          <my-embed *ngIf="publishedVideo" class="col-md-12 col-xl-6" [video]="publishedVideo"></my-embed>
         </div>
       </ng-template>
     </ng-container>
@@ -375,10 +375,7 @@
             <div class="form-group">
               <label i18n for="previewfile">Video thumbnail</label>
 
-              <my-preview-upload
-                i18n-inputLabel inputLabel="Edit" inputName="previewfile" formControlName="previewfile"
-                previewWidth="360px" previewHeight="200px"
-              ></my-preview-upload>
+              <my-thumbnail-manager id="previewfile" formControlName="previewfile" [video]="publishedVideo"></my-thumbnail-manager>
             </div>
 
             <div class="form-group">
@@ -438,10 +435,14 @@
               </div>
             </div>
 
-            <my-peertube-checkbox
-              inputName="commentsEnabled" formControlName="commentsEnabled"
-              i18n-labelText labelText="Enable video comments"
-            ></my-peertube-checkbox>
+            <div class="form-group mb-4">
+              <label i18n for="commentsPolicy">Comments policy</label>
+              <my-select-options labelForId="commentsPolicy" [items]="commentPolicies" formControlName="commentsPolicy" [clearable]="false"></my-select-options>
+
+              <div *ngIf="formErrors.commentsPolicy" class="form-error" role="alert">
+                {{ formErrors.commentsPolicy }}
+              </div>
+            </div>
 
             <my-peertube-checkbox
               inputName="downloadEnabled" formControlName="downloadEnabled"

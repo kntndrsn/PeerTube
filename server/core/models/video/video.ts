@@ -15,11 +15,12 @@ import {
   VideoRateType,
   VideoState,
   VideoStreamingPlaylistType,
+  type VideoCommentPolicyType,
   type VideoPrivacyType,
   type VideoStateType
 } from '@peertube/peertube-models'
 import { uuidToShort } from '@peertube/peertube-node-utils'
-import { getPrivaciesForFederation, isPrivacyForFederation, isStateForFederation } from '@server/helpers/video.js'
+import { getPrivaciesForFederation } from '@server/helpers/video.js'
 import { InternalEventEmitter } from '@server/lib/internal-event-emitter.js'
 import { LiveManager } from '@server/lib/live/live-manager.js'
 import {
@@ -111,6 +112,7 @@ import { AccountVideoRateModel } from '../account/account-video-rate.js'
 import { AccountModel } from '../account/account.js'
 import { ActorImageModel } from '../actor/actor-image.js'
 import { ActorModel } from '../actor/actor.js'
+import { VideoAutomaticTagModel } from '../automatic-tag/video-automatic-tag.js'
 import { VideoRedundancyModel } from '../redundancy/video-redundancy.js'
 import { ServerModel } from '../server/server.js'
 import { TrackerModel } from '../server/tracker.js'
@@ -549,7 +551,7 @@ export class VideoModel extends SequelizeModel<VideoModel> {
 
   @AllowNull(false)
   @Column
-  commentsEnabled: boolean
+  commentsPolicy: VideoCommentPolicyType
 
   @AllowNull(false)
   @Column
@@ -776,6 +778,12 @@ export class VideoModel extends SequelizeModel<VideoModel> {
     onDelete: 'cascade'
   })
   VideoPasswords: Awaited<VideoPasswordModel>[]
+
+  @HasMany(() => VideoAutomaticTagModel, {
+    foreignKey: 'videoId',
+    onDelete: 'CASCADE'
+  })
+  VideoAutomaticTags: Awaited<VideoAutomaticTagModel>[]
 
   @HasOne(() => VideoJobInfoModel, {
     foreignKey: {
@@ -1172,6 +1180,8 @@ export class VideoModel extends SequelizeModel<VideoModel> {
     search?: string
 
     excludeAlreadyWatched?: boolean
+
+    autoTagOneOf?: string[]
   }) {
     VideoModel.throwIfPrivateIncludeWithoutUser(options.include, options.user)
     VideoModel.throwIfPrivacyOneOfWithoutUser(options.privacyOneOf, options.user)
@@ -1196,6 +1206,7 @@ export class VideoModel extends SequelizeModel<VideoModel> {
         'categoryOneOf',
         'licenceOneOf',
         'languageOneOf',
+        'autoTagOneOf',
         'tagsOneOf',
         'tagsAllOf',
         'privacyOneOf',
@@ -1264,6 +1275,8 @@ export class VideoModel extends SequelizeModel<VideoModel> {
     excludeAlreadyWatched?: boolean
 
     countVideos?: boolean
+
+    autoTagOneOf?: string[]
   }) {
     VideoModel.throwIfPrivateIncludeWithoutUser(options.include, options.user)
     VideoModel.throwIfPrivacyOneOfWithoutUser(options.privacyOneOf, options.user)
@@ -1278,6 +1291,7 @@ export class VideoModel extends SequelizeModel<VideoModel> {
         'categoryOneOf',
         'licenceOneOf',
         'languageOneOf',
+        'autoTagOneOf',
         'tagsOneOf',
         'tagsAllOf',
         'privacyOneOf',
@@ -1392,6 +1406,12 @@ export class VideoModel extends SequelizeModel<VideoModel> {
     return queryBuilder.queryVideo({ id, transaction, type: 'thumbnails-blacklist' })
   }
 
+  static loadAndPopulateAccountAndFiles (id: number | string, transaction?: Transaction): Promise<MVideoAccountLightBlacklistAllFiles> {
+    const queryBuilder = new VideoModelGetQueryBuilder(VideoModel.sequelize)
+
+    return queryBuilder.queryVideo({ id, transaction, type: 'account-blacklist-files' })
+  }
+
   static loadImmutableAttributes (id: number | string, t?: Transaction): Promise<MVideoImmutable> {
     const fun = () => {
       const query = {
@@ -1446,6 +1466,12 @@ export class VideoModel extends SequelizeModel<VideoModel> {
     const queryBuilder = new VideoModelGetQueryBuilder(VideoModel.sequelize)
 
     return queryBuilder.queryVideo({ url, transaction, type: 'thumbnails' })
+  }
+
+  static loadByUrlWithBlacklist (url: string, transaction?: Transaction): Promise<MVideoThumbnailBlacklist> {
+    const queryBuilder = new VideoModelGetQueryBuilder(VideoModel.sequelize)
+
+    return queryBuilder.queryVideo({ url, transaction, type: 'thumbnails-blacklist' })
   }
 
   static loadByUrlAndPopulateAccount (url: string, transaction?: Transaction): Promise<MVideoAccountLight> {
@@ -2043,18 +2069,6 @@ export class VideoModel extends SequelizeModel<VideoModel> {
     if (this.isOwned()) return false
 
     return isOutdated(this, ACTIVITY_PUB.VIDEO_REFRESH_INTERVAL)
-  }
-
-  hasPrivacyForFederation () {
-    return isPrivacyForFederation(this.privacy)
-  }
-
-  hasStateForFederation () {
-    return isStateForFederation(this.state)
-  }
-
-  isNewVideoForFederation (newPrivacy: VideoPrivacyType) {
-    return this.hasPrivacyForFederation() === false && isPrivacyForFederation(newPrivacy) === true
   }
 
   setAsRefreshed (transaction?: Transaction) {

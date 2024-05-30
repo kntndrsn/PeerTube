@@ -84,7 +84,7 @@ export class VideoActionsDropdownComponent implements OnChanges {
     studio: true,
     stats: true
   }
-  @Input() placement = 'left'
+  @Input() placement = 'left auto'
   @Input() moreActions: DropdownAction<{ video: Video }>[][] = []
   @Input({ transform: booleanAttribute }) actionAvailabilityHint = false
 
@@ -187,7 +187,7 @@ export class VideoActionsDropdownComponent implements OnChanges {
   }
 
   isVideoStatsAvailable () {
-    return this.video.isOwnerOrHasSeeAllVideosRight(this.user)
+    return this.video.isLocal && this.video.isOwnerOrHasSeeAllVideosRight(this.user)
   }
 
   isVideoRemovable () {
@@ -335,7 +335,7 @@ export class VideoActionsDropdownComponent implements OnChanges {
   }
 
   runTranscoding (video: Video, type: 'hls' | 'web-video') {
-    this.videoService.runTranscoding({ videoIds: [ video.id ], type, askForForceTranscodingIfNeeded: true })
+    this.videoService.runTranscoding({ videos: [ video ], type, askForForceTranscodingIfNeeded: true })
       .subscribe({
         next: () => {
           this.notifier.success($localize`Transcoding jobs created for "${video.name}".`)

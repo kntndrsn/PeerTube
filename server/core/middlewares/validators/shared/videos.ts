@@ -18,7 +18,7 @@ import {
   MVideoFullLight,
   MVideoId,
   MVideoImmutable,
-  MVideoThumbnail,
+  MVideoThumbnailBlacklist,
   MVideoUUID,
   MVideoWithRights
 } from '@server/types/models/index.js'
@@ -47,7 +47,7 @@ export async function doesVideoExist (id: number | string, res: Response, fetchT
       res.locals.videoAll = video as MVideoFullLight
       break
 
-    case 'only-immutable-attributes':
+    case 'unsafe-only-immutable-attributes':
       res.locals.onlyImmutableVideo = video as MVideoImmutable
       break
 
@@ -55,8 +55,8 @@ export async function doesVideoExist (id: number | string, res: Response, fetchT
       res.locals.videoId = video as MVideoId
       break
 
-    case 'only-video':
-      res.locals.onlyVideo = video as MVideoThumbnail
+    case 'only-video-and-blacklist':
+      res.locals.onlyVideo = video as MVideoThumbnailBlacklist
       break
   }
 
@@ -287,7 +287,6 @@ function assignVideoTokenIfNeeded (req: Request, res: Response, video: MVideoUUI
 // ---------------------------------------------------------------------------
 
 export function checkUserCanManageVideo (user: MUser, video: MVideoAccountLight, right: UserRightType, res: Response, onlyOwned = true) {
-  // Retrieve the user who did the request
   if (onlyOwned && video.isOwned() === false) {
     res.fail({
       status: HttpStatusCode.FORBIDDEN_403,
@@ -296,9 +295,6 @@ export function checkUserCanManageVideo (user: MUser, video: MVideoAccountLight,
     return false
   }
 
-  // Check if the user can delete the video
-  // The user can delete it if he has the right
-  // Or if s/he is the video's account
   const account = video.VideoChannel.Account
   if (user.hasRight(right) === false && account.userId !== user.id) {
     res.fail({

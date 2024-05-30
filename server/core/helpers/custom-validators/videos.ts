@@ -1,12 +1,13 @@
+import { HttpStatusCode, VideoIncludeType, VideoPrivacy, VideoPrivacyType, VideoRateType } from '@peertube/peertube-models'
+import { getVideoWithAttributes } from '@server/helpers/video.js'
 import { Request, Response, UploadFilesForCheck } from 'express'
 import { decode as magnetUriDecode } from 'magnet-uri'
 import validator from 'validator'
-import { HttpStatusCode, VideoIncludeType, VideoPrivacy, VideoPrivacyType, VideoRateType } from '@peertube/peertube-models'
-import { getVideoWithAttributes } from '@server/helpers/video.js'
 import {
   CONSTRAINTS_FIELDS,
   MIMETYPES,
   VIDEO_CATEGORIES,
+  VIDEO_COMMENTS_POLICY,
   VIDEO_LICENCES,
   VIDEO_LIVE,
   VIDEO_PRIVACIES,
@@ -46,6 +47,10 @@ export function isVideoDescriptionValid (value: string) {
   return value === null || (exists(value) && validator.default.isLength(value, VIDEOS_CONSTRAINTS_FIELDS.DESCRIPTION))
 }
 
+export function isVideoCommentsPolicyValid (value: any) {
+  return value === null || VIDEO_COMMENTS_POLICY[value] !== undefined
+}
+
 export function isVideoSupportValid (value: string) {
   return value === null || (exists(value) && validator.default.isLength(value, VIDEOS_CONSTRAINTS_FIELDS.SUPPORT))
 }
@@ -70,7 +75,7 @@ export function areVideoTagsValid (tags: string[]) {
   )
 }
 
-export function isVideoViewsValid (value: string) {
+export function isVideoViewsValid (value: string | number) {
   return exists(value) && validator.default.isInt(value + '', VIDEOS_CONSTRAINTS_FIELDS.VIEWS)
 }
 

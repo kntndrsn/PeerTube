@@ -1,9 +1,13 @@
-import express, { UploadFiles } from 'express'
-import { Transaction } from 'sequelize'
 import { forceNumber } from '@peertube/peertube-core-utils'
-import { HttpStatusCode, ThumbnailType, VideoPrivacy, VideoPrivacyType, VideoUpdate } from '@peertube/peertube-models'
+import { HttpStatusCode, ThumbnailType, VideoCommentPolicy, VideoPrivacy, VideoPrivacyType, VideoUpdate } from '@peertube/peertube-models'
 import { exists } from '@server/helpers/custom-validators/misc.js'
 import { changeVideoChannelShare } from '@server/lib/activitypub/share.js'
+import { isNewVideoPrivacyForFederation, isPrivacyForFederation } from '@server/lib/activitypub/videos/federate.js'
+import { AutomaticTagger } from '@server/lib/automatic-tags/automatic-tagger.js'
+import { setAndSaveVideoAutomaticTags } from '@server/lib/automatic-tags/automatic-tags.js'
+import { updateLocalVideoMiniatureFromExisting } from '@server/lib/thumbnail.js'
+import { replaceChaptersFromDescriptionIfNeeded } from '@server/lib/video-chapters.js'
+import { addVideoJobsAfterUpdate } from '@server/lib/video-jobs.js'
 import { VideoPathManager } from '@server/lib/video-path-manager.js'
 import { setVideoPrivacy } from '@server/lib/video-privacy.js'
 import { setVideoTags } from '@server/lib/video.js'
@@ -11,7 +15,9 @@ import { openapiOperationDoc } from '@server/middlewares/doc.js'
 import { VideoPasswordModel } from '@server/models/video/video-password.js'
 import { FilteredModelAttributes } from '@server/types/index.js'
 import { MVideoFullLight, MVideoThumbnail } from '@server/types/models/index.js'
-import { auditLoggerFactory, getAuditIdFromRes, VideoAuditView } from '../../../helpers/audit-logger.js'
+import express, { UploadFiles } from 'express'
+import { Transaction } from 'sequelize'
+import { VideoAuditView, auditLoggerFactory, getAuditIdFromRes } from '../../../helpers/audit-logger.js'
 import { resetSequelizeInstance } from '../../../helpers/database-utils.js'
 import { createReqFiles } from '../../../helpers/express-utils.js'
 import { logger, loggerTagsFactory } from '../../../helpers/logger.js'
@@ -22,9 +28,6 @@ import { autoBlacklistVideoIfNeeded } from '../../../lib/video-blacklist.js'
 import { asyncMiddleware, asyncRetryTransactionMiddleware, authenticate, videosUpdateValidator } from '../../../middlewares/index.js'
 import { ScheduleVideoUpdateModel } from '../../../models/video/schedule-video-update.js'
 import { VideoModel } from '../../../models/video/video.js'
-import { replaceChaptersFromDescriptionIfNeeded } from '@server/lib/video-chapters.js'
-import { addVideoJobsAfterUpdate } from '@server/lib/video-jobs.js'
-import { updateLocalVideoMiniatureFromExisting } from '@server/lib/thumbnail.js'
 
 const lTags = loggerTagsFactory('api', 'video')
 const auditLogger = auditLoggerFactory('videos')
@@ -53,7 +56,7 @@ async function updateVideo (req: express.Request, res: express.Response) {
   const oldVideoAuditView = new VideoAuditView(videoFromReq.toFormattedDetailsJSON())
   const videoInfoToUpdate: VideoUpdate = req.body
 
-  const hadPrivacyForFederation = videoFromReq.hasPrivacyForFederation()
+  const hadPrivacyForFederation = isPrivacyForFederation(videoFromReq.privacy)
   const oldPrivacy = videoFromReq.privacy
 
   const thumbnails = await buildVideoThumbnailsFromReq(videoFromReq, req.files)
@@ -64,6 +67,7 @@ async function updateVideo (req: express.Request, res: express.Response) {
       // Refresh video since thumbnails to prevent concurrent updates
       const video = await VideoModel.loadFull(videoFromReq.id, t)
 
+      const oldName = video.name
       const oldDescription = video.description
       const oldVideoChannel = video.VideoChannel
 
@@ -76,12 +80,20 @@ async function updateVideo (req: express.Request, res: express.Response) {
         'waitTranscoding',
         'support',
         'description',
-        'commentsEnabled',
         'downloadEnabled'
       ]
 
       for (const key of keysToUpdate) {
         if (videoInfoToUpdate[key] !== undefined) video.set(key, videoInfoToUpdate[key])
+      }
+
+      // Special treatment for comments policy to support deprecated commentsEnabled attribute
+      if (videoInfoToUpdate.commentsPolicy !== undefined) {
+        video.commentsPolicy = videoInfoToUpdate.commentsPolicy
+      } else if (videoInfoToUpdate.commentsEnabled === true) {
+        video.commentsPolicy = VideoCommentPolicy.ENABLED
+      } else if (videoInfoToUpdate.commentsEnabled === false) {
+        video.commentsPolicy = VideoCommentPolicy.DISABLED
       }
 
       if (videoInfoToUpdate.originallyPublishedAt !== undefined) {
@@ -141,6 +153,11 @@ async function updateVideo (req: express.Request, res: express.Response) {
         })
       }
 
+      if (oldName !== video.name || oldDescription !== video.description) {
+        const automaticTags = await new AutomaticTagger().buildVideoAutomaticTags({ video, transaction: t })
+        await setAndSaveVideoAutomaticTags({ video, automaticTags, transaction: t })
+      }
+
       await autoBlacklistVideoIfNeeded({
         video: videoInstanceUpdated,
         user: res.locals.oauth.token.User,
@@ -191,7 +208,7 @@ async function updateVideoPrivacy (options: {
   transaction: Transaction
 }) {
   const { videoInstance, videoInfoToUpdate, hadPrivacyForFederation, transaction } = options
-  const isNewVideoForFederation = videoInstance.isNewVideoForFederation(videoInfoToUpdate.privacy)
+  const isNewVideoForFederation = isNewVideoPrivacyForFederation(videoInstance.privacy, videoInfoToUpdate.privacy)
 
   const newPrivacy = forceNumber(videoInfoToUpdate.privacy) as VideoPrivacyType
   setVideoPrivacy(videoInstance, newPrivacy)
@@ -207,7 +224,7 @@ async function updateVideoPrivacy (options: {
   }
 
   // Unfederate the video if the new privacy is not compatible with federation
-  if (hadPrivacyForFederation && !videoInstance.hasPrivacyForFederation()) {
+  if (hadPrivacyForFederation && !isPrivacyForFederation(videoInstance.privacy)) {
     await VideoModel.sendDelete(videoInstance, { transaction })
   }
 

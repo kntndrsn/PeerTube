@@ -16,6 +16,7 @@ import { isHostValid } from '../../helpers/custom-validators/servers.js'
 import { VideoRedundancyModel } from '../../models/redundancy/video-redundancy.js'
 import { ServerModel } from '../../models/server/server.js'
 import { areValidationErrors, doesVideoExist, isValidVideoIdParam } from './shared/index.js'
+import { canVideoBeFederated } from '@server/lib/activitypub/videos/federate.js'
 
 const videoFileRedundancyGetValidator = [
   isValidVideoIdParam('videoId'),
@@ -31,6 +32,7 @@ const videoFileRedundancyGetValidator = [
   async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (areValidationErrors(req, res)) return
     if (!await doesVideoExist(req.params.videoId, res)) return
+    if (!canVideoBeFederated(res.locals.onlyVideo)) return res.sendStatus(HttpStatusCode.NOT_FOUND_404)
 
     const video = res.locals.videoAll
 
@@ -74,6 +76,7 @@ const videoPlaylistRedundancyGetValidator = [
     if (!await doesVideoExist(req.params.videoId, res)) return
 
     const video = res.locals.videoAll
+    if (!canVideoBeFederated(video)) return res.sendStatus(HttpStatusCode.NOT_FOUND_404)
 
     const paramPlaylistType = req.params.streamingPlaylistType as unknown as number // We casted to int above
     const videoStreamingPlaylist = video.VideoStreamingPlaylists.find(p => p.type === paramPlaylistType)
@@ -143,7 +146,7 @@ const addVideoRedundancyValidator = [
   async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (areValidationErrors(req, res)) return
 
-    if (!await doesVideoExist(req.body.videoId, res, 'only-video')) return
+    if (!await doesVideoExist(req.body.videoId, res, 'only-video-and-blacklist')) return
 
     if (res.locals.onlyVideo.remote === false) {
       return res.fail({ message: 'Cannot create a redundancy on a local video' })

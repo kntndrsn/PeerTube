@@ -1,6 +1,6 @@
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common'
 import { Component, OnInit, ViewChild } from '@angular/core'
-import { ActivatedRoute, Router } from '@angular/router'
+import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { AuthService, ConfirmService, Notifier, RestPagination, RestTable } from '@app/core'
 import { formatICU, getAbsoluteAPIUrl } from '@app/helpers'
 import { Video } from '@app/shared/shared-main/video/video.model'
@@ -51,6 +51,7 @@ import { VideoAdminService } from './video-admin.service'
     EmbedComponent,
     VideoBlockComponent,
     DatePipe,
+    RouterLink,
     BytesPipe
   ]
 })
@@ -256,6 +257,14 @@ export class VideoListComponent extends RestTable <Video> implements OnInit {
       })
   }
 
+  buildSearchAutoTag (tag: string) {
+    const str = `autoTag:"${tag}"`
+
+    if (this.search) return this.search + ' ' + str
+
+    return str
+  }
+
   protected reloadDataInternal () {
     this.loading = true
 
@@ -351,7 +360,7 @@ export class VideoListComponent extends RestTable <Video> implements OnInit {
   }
 
   private runTranscoding (videos: Video[], type: 'hls' | 'web-video') {
-    this.videoService.runTranscoding({ videoIds: videos.map(v => v.id), type, askForForceTranscodingIfNeeded: false })
+    this.videoService.runTranscoding({ videos, type, askForForceTranscodingIfNeeded: true })
       .subscribe({
         next: () => {
           this.notifier.success($localize`Transcoding jobs created.`)
