@@ -419,7 +419,7 @@ plugins:
   # This is an unmoderated plugin index, so only install plugins/themes you trust
   index:
     enabled: true
-    check_latest_versions_interval: '12 hours' # How often you want to check new plugins/themes versions
+    check_latest_versions_interval: '4 hours' # How often you want to check new plugins/themes versions
     url: 'https://packages.joinpeertube.org'
 
 federation:
@@ -469,6 +469,18 @@ thumbnails:
     # Increasing this value will increase CPU and memory usage when generating the thumbnail, especially for high video resolution
     # Minimum value is 2
     frames_to_analyze: 50
+
+  # Only two sizes are currently supported for now (not less, not more)
+  # 1 size for the thumbnail (displayed in video miniatures)
+  # 1 size for the preview (displayed in the video player)
+  sizes:
+    -
+      width: 280
+      height: 157
+
+    -
+      width: 850
+      height: 480
 
 stats:
   # Display registration requests stats (average response time, total requests...)

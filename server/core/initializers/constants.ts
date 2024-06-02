@@ -1,4 +1,4 @@
-import { randomInt } from '@peertube/peertube-core-utils'
+import { maxBy, minBy, randomInt } from '@peertube/peertube-core-utils'
 import {
   AbuseState,
   AbuseStateType,
@@ -903,14 +903,14 @@ const STATIC_MAX_AGE = {
 
 // Videos thumbnail size
 const THUMBNAILS_SIZE = {
-  width: 280,
-  height: 157,
-  minWidth: 150
+  width: minBy(CONFIG.THUMBNAILS.SIZES, 'width').width,
+  height: minBy(CONFIG.THUMBNAILS.SIZES, 'width').height,
+  minRemoteWidth: 150
 }
 const PREVIEWS_SIZE = {
-  width: 850,
-  height: 480,
-  minWidth: 400
+  width: maxBy(CONFIG.THUMBNAILS.SIZES, 'width').width,
+  height: maxBy(CONFIG.THUMBNAILS.SIZES, 'width').height,
+  minRemoteWidth: 400
 }
 const ACTOR_IMAGES_SIZE: { [key in ActorImageType_Type]: { width: number, height: number }[] } = {
   [ActorImageType.AVATAR]: [ // 1/1 ratio

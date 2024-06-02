@@ -371,7 +371,8 @@ const CONFIG = {
   THUMBNAILS: {
     GENERATION_FROM_VIDEO: {
       FRAMES_TO_ANALYZE: config.get<number>('thumbnails.generation_from_video.frames_to_analyze')
-    }
+    },
+    SIZES: config.get<{ width: number, height: number }[]>('thumbnails.sizes')
   },
   STATS: {
     REGISTRATION_REQUESTS: {
